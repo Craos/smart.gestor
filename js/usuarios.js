@@ -1,10 +1,36 @@
-let UsuarioUI = function (container) {
+class AdmUsers extends Usuarios {
 
-    let layout, list, form, grid, tabbar, currentuser, usuario = Usuario;
+    constructor(container) {
 
-    function MontaLayoutPrincipal() {
+        super();
 
-        layout = container.attachLayout({
+        this.MontaLayout(container);
+        this.MontaLista();
+        this.MontaTabbar();
+        this.MontaBarraSuperior();
+        this.MontaBarraInferior();
+        this.MontaGrid();
+
+        this.listNavUsers(this.list);
+
+        addEventListener('AoAdicionar', function () {
+            this.listNavUsers(this.list);
+        }.bind(this), false);
+
+        addEventListener('AoAtualizar', function () {
+            this.listNavUsers(this.list);
+        }.bind(this), false);
+
+        addEventListener('AoRemover', function () {
+            this.listNavUsers(this.list);
+        }.bind(this), false);
+
+
+    }
+
+    MontaLayout(container) {
+
+        this.layout = container.attachLayout({
             pattern: '2U',
             offsets: {
                 top: 0,
@@ -27,9 +53,9 @@ let UsuarioUI = function (container) {
 
     }
 
-    function MontaLista() {
+    MontaLista() {
 
-        list = layout.cells('a').attachList({
+        this.list = this.layout.cells('a').attachList({
             container: "data_container",
             type: {
                 template: "http->./html/listusers.html",
@@ -37,11 +63,17 @@ let UsuarioUI = function (container) {
             }
         });
 
+        this.list.attachEvent("onItemClick", function (id) {
+            this.formEditUser(id, this.tabbar.cells('forminfo'));
+            this.gridHistoricodeAcesso(id, this.grid);
+            return true;
+        }.bind(this))
+
     }
 
-    function MontaTabbar() {
+    MontaTabbar() {
 
-        tabbar = layout.cells('b').attachTabbar({
+        this.tabbar = this.layout.cells('b').attachTabbar({
             mode: "top",
             align: "left",
             close_button: false,
@@ -63,77 +95,84 @@ let UsuarioUI = function (container) {
             ]
         });
 
-    }
-
-    function MontaForm(data) {
-
-        form = tabbar.cells('forminfo').attachForm([
-            {type:'input', label:'Id:', name:'id'},
-            {type:'input', label:'Usuario:', name:'username'},
-            {type:'input', label:'Nome:', name:'first_name'},
-            {type:'input', label:'Sobrenome:', name:'last_name'},
-        ]);
-
-        if (data)
-            form.setFormData(data);
+        this.formEditUser(null, this.tabbar.cells('forminfo'));
 
     }
 
-    function MontaGrid() {
+    MontaBarraSuperior() {
 
-        grid = tabbar.cells('hist').attachGrid();
-        grid.setImagePath("./codebase/imgs/");
-        grid.setHeader("Data,Acesso,Sistema,Usuário");
-        grid.setColumnIds("filedate,id,client_id,user_id");
-        grid.setInitWidths("100,100");
-        grid.setColAlign("right,left");
-        grid.setColTypes("ro,ro,ro,ro");
-        grid.setColSorting("str,str");
-        grid.enableAutoWidth(true);
-        grid.init();
+        this.layout.cells('a').attachToolbar({
+            icon_path: 'img/toolbar/',
+            items:[
+                {type: 'button', id: 'atualizar', img: 'atualizar.png', text: 'Atualizar'},
+                {type: 'button', id: 'novo', img: 'adicionar.png', text: 'Adicionar'},
+            ]
+        }).attachEvent("onClick", function (id) {
 
-    }
+            switch (id) {
+                case 'atualizar':
+                    this.listNavUsers(this.list);
+                    break;
 
-    function CarregaLista() {
+                case 'novo':
+                    this.grid.clearAll();
+                    this.tabbar.tabs('forminfo').setActive();
+                    this.formEditUser(null, this.tabbar.cells('forminfo'));
+                    break;
 
-        usuario.Listar(function (data) {
+                default:
+                    break;
+            }
 
-            list.parse(data._embedded.list_users, 'json');
-
-            list.attachEvent("onItemClick", function (id) {
-
-                currentuser = id;
-                usuario.Obter(id, function (data) {
-
-                    if (data)
-                        form.setFormData(data);
-
-                    usuario.HistoricoAcesso(currentuser, function (data) {
-                        grid.clearAll();
-
-                        if (!data)
-                            return;
-
-                        data._embedded.list_access.filter(function (item) {
-                            grid.addRow(item.id,[item.filedate, item.id, item.title, item.user_id]);
-                        });
-
-                    });
-                });
-                return true;
-
-            });
-
-        });
+        }.bind(this));
 
     }
 
-    MontaLayoutPrincipal();
-    MontaLista();
-    MontaTabbar();
-    MontaForm();
-    MontaGrid();
-    CarregaLista();
+    MontaBarraInferior() {
 
-};
+        this.tabbar.cells('forminfo').attachToolbar({
+            icon_path: 'img/toolbar/',
+            items:[
+                {type: 'button', id: 'salvar', img: 'confirmar.png', text: 'Salvar'},
+                {type: 'button', id: 'remover', img: 'remover.png', text: 'Remover'}
+            ]
+        }).attachEvent("onClick", function (id) {
 
+            let data = this.form.getFormData();
+            switch (id) {
+
+                case 'salvar':
+                    if (data.id.length === 0) {
+                        delete data.id;
+                        this.Adicionar(data);
+                    } else {
+                        this.Atualizar({data:data, filter:{id:data.id}});
+                    }
+                    break;
+
+                case 'remover':
+                    this.Remover({filter:{id:data.id}});
+                    break;
+
+                default:
+                    break;
+            }
+
+        }.bind(this));
+
+    }
+
+    MontaGrid() {
+
+        this.grid = this.tabbar.cells('hist').attachGrid();
+        this.grid.setImagePath("./codebase/imgs/");
+        this.grid.setHeader("Data,Acesso,Sistema,Usuário");
+        this.grid.setColumnIds("filedate,acesso_id,client_id,user_id");
+        this.grid.setColTypes("ro,ro,ro,ro");
+        this.grid.setColSorting("str,str");
+        this.grid.enableAutoWidth(true);
+        this.grid.init();
+
+    }
+
+}

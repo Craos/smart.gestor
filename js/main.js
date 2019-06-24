@@ -57,7 +57,7 @@ dhtmlxEvent(window, 'load', function () {
 
         switch (id) {
             case 'usuarios':
-                new Usuarios(cell);
+                new AdmUsers(cell);
                 break;
 
             case 'perfis':
@@ -67,6 +67,6 @@ dhtmlxEvent(window, 'load', function () {
 
     };
 
-    new UsuarioUI(siderbar.cells('usuarios'));
+    new AdmUsers(siderbar.cells('usuarios'));
 
 });
