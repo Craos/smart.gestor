@@ -61,7 +61,7 @@ dhtmlxEvent(window, 'load', function () {
                 break;
 
             case 'perfis':
-                new Perfis(cell);
+                new AdmProfile(cell);
                 break;
         }
 
